@@ -1,0 +1,65 @@
+!pip install fitdecode
+!ls
+record = ['latitude', 'longitude', 'altitude', 'timestamp', 'heart_rate', 'cadence', 'speed', 'distance']
+#подключаем к блокноту пакеты
+import fitdecode
+import pandas as pd
+import os
+from datetime import datetime, timedelta
+from typing import Dict, Union, Optional,Tuple
+#функция, которая извлекает данные о координатах и преобразует их в десятичные градусы
+def get_fit_point_data(frame: fitdecode.records.FitDataMessage) -> Optional[Dict[str, Union[float, int, str, datetime]]]:
+  data: Dict[str, Union[float, int, str, datetime]] = {}
+  if not (frame.has_field('position_lat') and frame.has_field('position_long')):
+    return None
+
+#привести знчение координат к float
+  else:
+    data['latitude'] = frame.get_value('position_lat') / ((2**32) / 360)
+    data['longitude'] = frame.get_value('position_long') / ((2**32) / 360)
+
+  for field in record[2:]:
+    if frame.has_field(field):
+      data[field] = frame.get_value(field)
+
+  return data
+#функция, которая извлекает данные о параметрах тренировки
+def get_fit_other_data(col, frame: fitdecode.records.FitDataMessage) -> Optional[Dict[str, Union[float, int, str, datetime]]]:
+  data: Dict[str, Union[float, int, str, datatime]] = {}
+
+  for field in col:
+    if frame.has_field(field):
+      data[field] = frame.get_value(field)
+  return data
+#чтение файла, вызов функций и запись dataframe
+record_data = []
+with fitdecode.FitReader('/content/2_5303101742206956494.fit') as fit_file:
+  for frame in fit_file:
+    if isinstance(frame, fitdecode.records.FitDataMessage):
+      if frame.name == 'record':
+        single_point_data = get_fit_point_data(frame)
+        if single_point_data is not None:
+          record_data.append(single_point_data)
+record_df = pd.DataFrame(record_data, columns=record)
+#record_df
+#подключаем пакеты для обработки геометрии
+from pyproj import CRS
+import geopandas as gpd
+from shapely.geometry import LineString
+#получаем границы экстента и всей геометрии и центр
+line = gpd.GeoDataFrame(crs = CRS('EPSG:4326'), geometry=[LineString(zip(record_df.longitude, record_df.latitude))])
+line_centroid = line.centroid
+line_bounds = line.bounds
+#показываем на карте
+import folium
+m = folium.Map([line_centroid.y, line_centroid.x], tiles='cartodb positron')
+folium.GeoJson(line).add_to(m)
+folium.FitBounds([[line_bounds.miny[0], line_bounds.minx[0]], [line_bounds.maxy[0],line_bounds.maxx[0]]]).add_to(m)
+m
+#строим график
+import altair as alt
+alt.Chart(record_df).mark_point().encode(
+    y='cadence',
+    x='distance',
+    color='heart_rate',
+).interactive()
