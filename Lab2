@@ -1,0 +1,45 @@
+import osmnx as ox
+
+# Specify the city or area you want to analyze
+place_name = "City or Area Name"
+
+# Specify the amenities and other tags you're interested in
+tags = {'amenity': ['cafe', 'fast_food', 'restaurant', 'pub', 'bar', 'food_court'],
+'leisure': ['biergarten'],
+'cuisine': ['beverages']}
+
+# Extract POI data from OSM
+pois = ox.pois_from_place(place_name, tags)
+
+# Display the first few rows of the data
+print(pois.head())
+!pip install osmnx —upgrade
+import osmnx as ox
+
+# Укажите город (в данном случае, Уфа)
+place_name = "Ufa, Russia"
+
+# Задайте теги для кафе и других объектов интереса
+tags = {'amenity': 'cafe'}
+
+# Извлеките данные из OSM
+cafes = ox.pois_from_place(place_name, tags)
+
+# Выведите первые несколько строк данных
+print(cafes.head())
+import osmnx as ox
+
+# Укажите город (в данном случае, Уфа)
+place_name = "Ufa, Russia"
+
+# Получите географические координаты для указанного места
+place = ox.geocode_to_gdf(place_name)
+
+# Задайте теги для кафе и других объектов интереса
+tags = {'amenity': 'cafe'}
+
+# Извлеките данные из OSM
+cafes = ox.pois_from_polygon(place['geometry'][0], tags)
+
+# Выведите первые несколько строк данных
+print(cafes.head())
